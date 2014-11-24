@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Ios | Coding...]]></title>
+  <link href="http://jchuai.github.io/blog/categories/ios/atom.xml" rel="self"/>
+  <link href="http://jchuai.github.io/"/>
+  <updated>2014-11-24T18:13:21+08:00</updated>
+  <id>http://jchuai.github.io/</id>
+  <author>
+    <name><![CDATA[jchuai]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[iOS Create Customize View With Xib]]></title>
+    <link href="http://jchuai.github.io/blog/2014/11/18/ios-create-customize-view-with-xib/"/>
+    <updated>2014-11-18T14:04:11+08:00</updated>
+    <id>http://jchuai.github.io/blog/2014/11/18/ios-create-customize-view-with-xib</id>
+    <content type="html"><![CDATA[
+]]></content>
+  </entry>
+  
+</feed>

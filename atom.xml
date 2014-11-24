@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
+
   <title><![CDATA[Coding...]]></title>
   <link href="http://jchuai.github.io/atom.xml" rel="self"/>
   <link href="http://jchuai.github.io/"/>
-  <updated>2014-11-17T22:10:13+08:00</updated>
+  <updated>2014-11-24T18:13:21+08:00</updated>
   <id>http://jchuai.github.io/</id>
   <author>
     <name><![CDATA[jchuai]]></name>
@@ -11,5 +12,42 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[iOS Create Customize View With Xib]]></title>
+    <link href="http://jchuai.github.io/blog/2014/11/18/ios-create-customize-view-with-xib/"/>
+    <updated>2014-11-18T14:04:11+08:00</updated>
+    <id>http://jchuai.github.io/blog/2014/11/18/ios-create-customize-view-with-xib</id>
+    <content type="html"><![CDATA[
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Node Run Execute Shell Command]]></title>
+    <link href="http://jchuai.github.io/blog/2014/11/18/node-run-execute-shell-command/"/>
+    <updated>2014-11-18T14:03:25+08:00</updated>
+    <id>http://jchuai.github.io/blog/2014/11/18/node-run-execute-shell-command</id>
+    <content type="html"><![CDATA[
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Node Event]]></title>
+    <link href="http://jchuai.github.io/blog/2014/11/18/node-event/"/>
+    <updated>2014-11-18T14:02:02+08:00</updated>
+    <id>http://jchuai.github.io/blog/2014/11/18/node-event</id>
+    <content type="html"><![CDATA[
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[First Blog]]></title>
+    <link href="http://jchuai.github.io/blog/2014/11/18/first-blog/"/>
+    <updated>2014-11-18T13:49:47+08:00</updated>
+    <id>http://jchuai.github.io/blog/2014/11/18/first-blog</id>
+    <content type="html"><![CDATA[<p>这是我的第一篇博客。之前一直懒于学习和积累。最近受到大牛的影响，明白学习是每个IT民工一生要持续的事情。子曰“学而时习之，不亦说乎”，一味的学习不做笔记记录很容易忘记。外加上本人记忆力一向很差，所以还是要找个地方记录一下的。
+在接下来的日子里，我会主要focus在两个方面的学习上，iOS和Node.js</p>
+]]></content>
+  </entry>
   
 </feed>
