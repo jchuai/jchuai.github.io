@@ -7,6 +7,7 @@ categories: node.js
 ---
 #背景
 今天想要用node.js实现一个小程序，程序任务是：遍历某folder下所有文件，打印出是File类型的文件的名字。Node最大的特征是异步非阻塞，所以程序中用到的fs函数，全部想用异步的调用
+<!-- more -->
 #错误版本
 <pre>
 <code>
