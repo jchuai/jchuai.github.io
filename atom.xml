@@ -4,7 +4,7 @@
   <title><![CDATA[Coding...]]></title>
   <link href="http://jchuai.github.io/atom.xml" rel="self"/>
   <link href="http://jchuai.github.io/"/>
-  <updated>2014-11-24T23:50:32+08:00</updated>
+  <updated>2014-12-17T18:32:36+08:00</updated>
   <id>http://jchuai.github.io/</id>
   <author>
     <name><![CDATA[Coding...]]></name>
@@ -14,6 +14,56 @@
 
   
   <entry>
+    <title type="html"><![CDATA[Xcode6 - Devices Manager]]></title>
+    <link href="http://jchuai.github.io/blog/2014/12/17/xcode6-devices-manager/"/>
+    <updated>2014-12-17T17:33:07+08:00</updated>
+    <id>http://jchuai.github.io/blog/2014/12/17/xcode6-devices-manager</id>
+    <content type="html"><![CDATA[<h1>背景</h1>
+
+<p>今天用XCode6 建了一个工程，在编译的时候发现target只能选择&#8217;iOS Devices&#8217;,没有任何的simulator可以选择。如下图所示</p>
+
+<p><img src="http://jchuai.github.io/images/2014-12-17.0.png" alt="" /></p>
+
+<p>在手动打开simulator的时候出现错误对话框“Unable to determine device.” 升级了mac os系统以及重装了XCode都不能解决。最后是通过Simulator的‘Device Management&#8217; 解决的。</p>
+
+<!--more-->
+
+
+<h1>错误产生原因</h1>
+
+<p>在Xcode6中, application 的 folder改变了。在iOS8 之前，app documents location 如下：</p>
+
+<p><code>~/Library/Application Support/iPhone Simulator/ {iOS Version} /Applications/ {Application ID} /Documents </code></p>
+
+<p>在Xcode6，simulator的folder改为：</p>
+
+<p><code>~/Library/Developer/CoreSimulator/Devices/XXXXXXXX</code></p>
+
+<p>Devices 下对应着各个版本的simulator folder。我在想清空app documents folder的时候，误操作，把整个devices folder给清空了。就导致Xcode无法加载simulator folder，所以无法启动相应的simulator</p>
+
+<h1>解决方案</h1>
+
+<p>通过Simulator的Device Manger可以解决。打开Device Manger 通过 打开Simulator，菜单栏Hardware->Device->Manage Devices&hellip; 如下图所示。</p>
+
+<p><img src="http://jchuai.github.io/images/2014-12-17.1.png" alt="" /></p>
+
+<p>在这里可以添加Xcode6支持的simulator。添加完毕之后查看’~/Library/Developer/CoreSimulator/Devices‘ folder，可见被误删掉的simulator devices都添加回来。重装了Xcode6之后，并没有自动添加这些devices，还是需要手动在Devices Manager中添加。</p>
+
+<p><img src="http://jchuai.github.io/images/2014-12-17.2.png" alt="" /></p>
+
+<p>如果想要查看当前支持的simulator types，可以用如下命令</p>
+
+<p><code>
+:~$ xcrun simctl list
+</code></p>
+
+<p>App Documents folder 是在：</p>
+
+<p><code>~/Library/Developer/CoreSimulator/Devices/XXXXX/data/Containers/Data/Application/XXXXX/Documents/</code></p>
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[Nodejs: forEach vs for]]></title>
     <link href="http://jchuai.github.io/blog/2014/11/24/nodejs-foreach-vs-for/"/>
     <updated>2014-11-24T18:19:44+08:00</updated>
@@ -21,6 +71,9 @@
     <content type="html"><![CDATA[<h1>背景</h1>
 
 <p>今天想要用node.js实现一个小程序，程序任务是：遍历某folder下所有文件，打印出是File类型的文件的名字。Node最大的特征是异步非阻塞，所以程序中用到的fs函数，全部想用异步的调用</p>
+
+<!-- more -->
+
 
 <h1>错误版本</h1>
 
