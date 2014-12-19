@@ -6,7 +6,7 @@
 	<title>Coding&#8230;</title>
     <meta name="author" content="Coding...">
     
-	<meta name="description" content="Published on: Tags: xcode 背景 今天用XCode6 建了一个工程，在编译的时候发现target只能选择'iOS Devices',没有任何的simulator可以选择。如下图所示 在手动打开simulator的时候出现错误对话框“Unable to determine &hellip;">
+	<meta name="description" content="Published on: Tags: 背景 公司马上要部署新的version control system. 计划用Git。同时需要搭一套完整的环境，包括code review， permission control。暂时选定用Phabricator. 目前有很多公司在用Phabricator &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -79,6 +79,48 @@
 <!-- begin toload --> 
     <div id="content" class="inner">
         
+
+
+    <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2014/12/19/ubuntu-install-phabricator/">
+		
+			Ubuntu Install Phabricator</a>
+	</h2>
+    <div class="entry-content">
+    <div class="meta">
+      <div class="date">Published on: 
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-12-19T17:04:39+08:00" pubdate data-updated="true"></time></div>
+      <div class="tags">Tags: 
+
+</div>
+    </div>
+		<h1>背景</h1>
+
+<p>公司马上要部署新的version control system. 计划用Git。同时需要搭一套完整的环境，包括code review， permission control。暂时选定用<a href="http://phabricator.org/">Phabricator</a>. 目前有很多公司在用Phabricator，facebook转战Hg的同时也开始用。而且同时支持git/hg/svn，如果将来公司用git不爽了想用Hg，那么前端可以基本不用更改。做了两个星期的调研到底要用git还是Hg，已经没力气继续了，干脆提供Phabricator，以防止将来高层反悔了，我们也方便移植。
+开始用<a href="https://bitnami.com/stack/phabricator">Bitnami</a>一键安装了一个Phabricator server。结果发现Bitnami在安装时不可避免的更改了Phabricator的一些目录结构，导致后面升级更改都不方便。而且对于一键安装，作为一个系统管理员，最好避免这样偷懒，尤其是针对第三方提供的。一旦出问题就无从查起了。于是决定自己重搭环境。</p>
+
+
+		
+		<a href="/blog/2014/12/19/ubuntu-install-phabricator/" class="more-link">Read on &rarr;</a>
+	</div>
+
+<div class="meta">
+	
+</div>
+</article>
 
 
     <article class="post">
