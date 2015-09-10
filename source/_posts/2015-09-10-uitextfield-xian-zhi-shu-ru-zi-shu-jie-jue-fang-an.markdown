@@ -1,0 +1,104 @@
+---
+layout: post
+title: "UITextField 限制输入字数解决方案"
+date: 2015-09-10 15:13:57 +0800
+comments: true
+categories: iOS开发
+---
+本文提供了集中限制UITextField输入字数的方式，并针对中文联想词提供了解决方案。所用代码为Swift。
+#### 方法一：利用delegate实现
+UITextFieldDelegate 提供了函数可以判断用户输入过程，demo如下
+<!-- more -->
+
+	func textField(textField: UITextField, shouldChangeCharactersInRange range: NSRange, replacementString string: String) -> Bool {
+	
+		// 不检测“删除”键
+        if count(string) == 0 {
+            return true
+        }
+        
+        // 防止UITextField ‘Undo’引发crash
+        if range.location + range.length > count(textField.text){
+            return false
+        }
+        
+        let newLength = count(textField.text) + count(string) - range.length
+        return newLength <= limitation - 1
+    }
+
+在TextField 更改之前，会通过该函数询问delegate是否应该改变text内容，因此我们可以在这个函数中约定是否接收用户的输入。
+但是这种方式针对中文输入法有个缺陷，它无法检测和限制联想词的输入。因此该方式不适合中文输入法下的字数限制
+
+#### 方法二：监控 UIControlEvents.EditingChanged 或者 UITextFieldTextDidChangeNotification
+UITextField的text内容再更改的时候，会触发UIControlEvents.EditingChanged 并发送 UITextFieldTextDidChangeNotification。因此可以通过监听事件或者接收通知的方式来获知text内容的改变，在改变的时候添加限制条件。demo如下：
+
+增加监听事件
+
+	_textField.addTarget(self, action: Selector("textFieldDidChanged:"), forControlEvents: UIControlEvents.EditingChanged)
+	
+限制字数
+	
+	func textFieldDidChanged(textField: UITextField) {
+        if limitation > 0 {
+        	// markedTextRange指的是当前高亮选中的，除了长按选中，用户中文输入拼音过程往往也是高亮选中状态
+            if let selectedRange = textField.markedTextRange {
+                
+            } else {
+                let text = textField.text
+                if text.length > limitation {
+                    let range = Range(start: text.startIndex, end: advance(text.startIndex, limitation))
+                    let subText = text.substringWithRange(range)
+                    textField.text = subText
+                }
+            }
+        }
+        
+    }
+    
+通过这种方式对字数进行限制，产生的效果是用户在中文拼音输入状态不会限制字数，而是在用户确认输入的瞬间进行字数限制截取。目前跟Android自身带的字数限制功能效果一致
+
+#### 方法三：delegate与监控方式相结合
+利用方法二已经可以满足UITextField字数限制的需求。但是如果想在用户输入拼音阶段就进行字数限制，防止用户输入过长，那么建议结合delegate。因为delegate在用户输入过程就可以判断输入的长度，从而判断是否允许用户继续输入；而在输入确认的时刻，再利用监控方式，防止中文联想词的输入。demo如下：
+
+增加监控
+
+	_textField.addTarget(self, action: Selector("textFieldDidChanged:"), forControlEvents: UIControlEvents.EditingChanged)
+	
+限制字数
+	
+	func textFieldDidChanged(textField: UITextField) {
+        if limitation > 0 {
+        	// markedTextRange指的是当前高亮选中的，除了长按选中，用户中文输入拼音过程往往也是高亮选中状态
+            if let selectedRange = textField.markedTextRange {
+                
+            } else {
+                let text = textField.text
+                if text.length > limitation {
+                    let range = Range(start: text.startIndex, end: advance(text.startIndex, limitation))
+                    let subText = text.substringWithRange(range)
+                    textField.text = subText
+                }
+            }
+        }
+        
+    }
+    
+delegate监控用户输入
+
+	func textField(textField: UITextField, shouldChangeCharactersInRange range: NSRange, replacementString string: String) -> Bool {
+	
+		// 不检测“删除”键
+        if count(string) == 0 {
+            return true
+        }
+        
+        // 防止UITextField ‘Undo’引发crash
+        if range.location + range.length > count(textField.text){
+            return false
+        }
+        
+        let newLength = count(textField.text) + count(string) - range.length
+        return newLength <= limitation - 1
+    }		
+
+从上面大家可以看出，监控也可在用户输入过程进行字数限制，但是效果不好。因为 `textField.text = subText`，用户输入一旦过长，文本框内容立马会被用户输入所替代，但这个时候往往输入的是几个拼音字母，因此用户体验不好。而delegate方法不会立马替换文本框内容，而是限制了用户输入，用户体验比较好。也因为这个原因，我们在delegate上的检测limitation要留有余量。
