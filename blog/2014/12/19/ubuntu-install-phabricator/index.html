@@ -1,0 +1,233 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Ubuntu Install Phabricator - Coding&#8230;</title>
+    <meta name="author" content="Coding...">
+    
+	<meta name="description" content="背景 公司马上要部署新的version control system. 计划用Git。同时需要搭一套完整的环境，包括code review， permission control。暂时选定用Phabricator. 目前有很多公司在用Phabricator，facebook转战Hg的同时也开始用。 &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="Coding..." type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.ico" rel="shortcut icon">
+    <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+
+    <link href='http://fonts.googleapis.com/css?family=Slackey' rel='stylesheet' type='text/css'>
+    <link href='http://fonts.googleapis.com/css?family=Fjalla+One' rel='stylesheet' type='text/css'>
+    <link href='http://fonts.googleapis.com/css?family=Amethysta' rel='stylesheet' type='text/css'>
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+
+    <script type="text/javascript" src="/javascripts/jquery-tapir.js"></script>
+
+    <!-- remove or comment it to disable ajaxification -->   
+    <script src="/javascripts/ajaxify.js"></script>
+   
+    
+    
+
+</head>
+
+
+<body>
+    <div id="wrapper">
+    <header id="header" class="inner"><!-- for more effects see _animate.scss -->
+<h1 class="animated bounceInDown">
+    <div id="headerbg">
+        Coding&#8230;
+    </div>
+</h1>
+<br>
+
+<ul id="social-links" style="text-align:center">
+  
+  
+  
+  
+  
+  
+  
+  
+</ul>
+
+
+<!-- use full url including 'index.html' for navigation bar if you are using ajax -->
+<ul id="nav">
+	<li id="ajax"><a href="/index.html">Home</a></li>
+	<li id="ajax"><a href="/blog/archives/index.html">Archives</a></li>
+    <li><a href="/atom.xml">RSS</a></li>
+    
+    <li>
+    <div id="dark">
+        <form method="get" action="/search.html" id="search">
+            <input name="query" type="text" placeholder="Search..." x-webkit-speech />
+        </form>
+    </div>
+    </li>
+        
+</ul>
+
+
+
+
+</header>
+
+<div id="toload">
+<!-- begin toload --> 
+    <div id="content" class="inner">
+        <article class="post">
+	<h2 class="title">Ubuntu Install Phabricator</h2>
+	<div class="entry-content"><h1>背景</h1>
+
+<p>公司马上要部署新的version control system. 计划用Git。同时需要搭一套完整的环境，包括code review， permission control。暂时选定用<a href="http://phabricator.org/">Phabricator</a>. 目前有很多公司在用Phabricator，facebook转战Hg的同时也开始用。而且同时支持git/hg/svn，如果将来公司用git不爽了想用Hg，那么前端可以基本不用更改。做了两个星期的调研到底要用git还是Hg，已经没力气继续了，干脆提供Phabricator，以防止将来高层反悔了，我们也方便移植。
+开始用<a href="https://bitnami.com/stack/phabricator">Bitnami</a>一键安装了一个Phabricator server。结果发现Bitnami在安装时不可避免的更改了Phabricator的一些目录结构，导致后面升级更改都不方便。而且对于一键安装，作为一个系统管理员，最好避免这样偷懒，尤其是针对第三方提供的。一旦出问题就无从查起了。于是决定自己重搭环境。</p>
+
+<!-- more -->
+
+
+<h1>搭建步骤</h1>
+
+<h2>1. Ubuntu机子配置</h2>
+
+<p>建议采用Linux机子搭建Phabricator。官网提供了针对Linux机子的脚本，搭建很方便。首先需要更改机子Hostname。Phabricator要求server 域名必须带dot &lsquo;.&rsquo;,所以如果不想用IP地址，那么需要更改机子的hostname,hosts并重启机器。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>~$ sudo vi /etc/hostname
+</span><span class='line'>~$ sudo vi /etc/hosts
+</span><span class='line'>~$ sudo shutdown -r now</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>2. Install Phabricator</h2>
+
+<p>Phabricator 官网提供了针对RedHat和Ubuntu的安装脚本，可以帮助安装好所需要的applications。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Ubuntu
+</span><span class='line'>~$ wget http://www.phabricator.com/rsrc/install/install_ubuntu.sh
+</span><span class='line'>~$ sudo sh install_ubuntu.sh
+</span><span class='line'>
+</span><span class='line'>RedHat
+</span><span class='line'>~$ wget http://www.phabricator.com/rsrc/install/install_rhel-derivs.sh
+</span><span class='line'>~$ sudo sh install_rhel-derivs.sh</span></code></pre></td></tr></table></div></figure>
+
+
+<p>脚本会自动去下载相关的app，包括git/Apache/MySql/PHP等。此外，脚本还会git clone 相应的Phabricator的source code到当前folder。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ cd somewhere/ # pick some install directory
+</span><span class='line'>somewhere/ $ git clone https://github.com/phacility/libphutil.git
+</span><span class='line'>somewhere/ $ git clone https://github.com/phacility/arcanist.git
+</span><span class='line'>somewhere/ $ git clone https://github.com/phacility/phabricator.git</span></code></pre></td></tr></table></div></figure>
+
+
+<p>因为脚本运行过程中没有报任何错误，所以就直接进入<a href="https://secure.phabricator.com/book/phabricator/article/configuration_guide/">Configure Guide</a> 步骤了。</p>
+
+<h2>3. Configure Apache2</h2>
+
+<p>在配置Apache2的时候遇到了些困难。首先我机子上的Apache是通过apt-get安装的(上面脚本运行时已经安装过apache2了)，没有用source code 本地安装。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>~$ sudo apt-get install apache2</span></code></pre></td></tr></table></div></figure>
+
+
+<p>其次因为我机子的Apache2已经是最新版本的2.4。所以conf文件位置变掉了。Phabricator 官网上说在httpd.conf中配置VirtualHost，但是Apache2.4已经不用httpd.conf文件了。需要在/etc/apache2/sites-available/000-default.conf中添加VirtualHost。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>~$ sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/000-default.conf_bak
+</span><span class='line'>~$ sudo vi /etc/apache2/sites-available/000-default.conf
+</span><span class='line'>/# Update this file following Phabricator official doc
+</span><span class='line'>~$ sudo /etc/init.d/apache2 restart
+</span><span class='line'>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>4. Configure MySql</h2>
+
+<p>用以下命令确保mysql安装成功并运行</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>~$ mysql -uroot -p</span></code></pre></td></tr></table></div></figure>
+
+
+<p>在mysql运行情况下开始配置，</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>phabricator/ $ ./bin/storage upgrade --user &lt;user&gt; --password &lt;password&gt;</span></code></pre></td></tr></table></div></figure>
+
+
+<p>至此Phabricator全部配置完毕，但是还有其他的可以以管理员的身份进行配置。总的来说，因为有了官网提供的脚本，linux上配置Phabricator还是很方便的。</p>
+</div>
+
+<div class="meta">
+	
+</div>
+</article>
+
+	<div class="share">
+	<div class="addthis_toolbox addthis_default_style ">
+	
+	
+	<a class="addthis_button_tweet"></a>
+	
+	
+	<a class="addthis_counter addthis_pill_style"></a>
+	</div>
+  <script type="text/javascript" src="http://s7.addthis.com/js/250/addthis_widget.js#pubid="></script>
+</div>
+
+
+
+    </div>
+    <footer id="footer">
+    <div style="display:inline">
+    Copyright &copy; 2015
+
+    Coding&#8230;
+. Powered by <a href="http://octopress.org">Octopress</a> | 
+    Theme <a href="http://github.com/panks/fabric">fabric</a> by <a href="http://panks.me">Pankaj Kumar</a>
+</div>
+
+
+    </footer>
+    <script src="/javascripts/fabric.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+
+
+
+
+<!-- end toload --> 
+</div>
+</div>
+<script src="/javascripts/jquery.ui.totop.js" type="text/javascript"></script>
+<script type="text/javascript">
+/*<![CDATA[*/
+;(function($){$().UItoTop({easingType:'easeOutCirc'});})(jQuery); 
+/*]]>*/
+</script><!-- remove it to remove the scroll to top button -->
+</body>
+</html>

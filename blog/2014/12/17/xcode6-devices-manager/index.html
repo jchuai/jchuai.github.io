@@ -1,0 +1,181 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Xcode6 - Devices Manager - Coding&#8230;</title>
+    <meta name="author" content="Coding...">
+    
+	<meta name="description" content="背景 今天用XCode6 建了一个工程，在编译的时候发现target只能选择'iOS Devices',没有任何的simulator可以选择。如下图所示 在手动打开simulator的时候出现错误对话框“Unable to determine device.” 升级了mac &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="Coding..." type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.ico" rel="shortcut icon">
+    <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+
+    <link href='http://fonts.googleapis.com/css?family=Slackey' rel='stylesheet' type='text/css'>
+    <link href='http://fonts.googleapis.com/css?family=Fjalla+One' rel='stylesheet' type='text/css'>
+    <link href='http://fonts.googleapis.com/css?family=Amethysta' rel='stylesheet' type='text/css'>
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+
+    <script type="text/javascript" src="/javascripts/jquery-tapir.js"></script>
+
+    <!-- remove or comment it to disable ajaxification -->   
+    <script src="/javascripts/ajaxify.js"></script>
+   
+    
+    
+
+</head>
+
+
+<body>
+    <div id="wrapper">
+    <header id="header" class="inner"><!-- for more effects see _animate.scss -->
+<h1 class="animated bounceInDown">
+    <div id="headerbg">
+        Coding&#8230;
+    </div>
+</h1>
+<br>
+
+<ul id="social-links" style="text-align:center">
+  
+  
+  
+  
+  
+  
+  
+  
+</ul>
+
+
+<!-- use full url including 'index.html' for navigation bar if you are using ajax -->
+<ul id="nav">
+	<li id="ajax"><a href="/index.html">Home</a></li>
+	<li id="ajax"><a href="/blog/archives/index.html">Archives</a></li>
+    <li><a href="/atom.xml">RSS</a></li>
+    
+    <li>
+    <div id="dark">
+        <form method="get" action="/search.html" id="search">
+            <input name="query" type="text" placeholder="Search..." x-webkit-speech />
+        </form>
+    </div>
+    </li>
+        
+</ul>
+
+
+
+
+</header>
+
+<div id="toload">
+<!-- begin toload --> 
+    <div id="content" class="inner">
+        <article class="post">
+	<h2 class="title">Xcode6 - Devices Manager</h2>
+	<div class="entry-content"><h1>背景</h1>
+
+<p>今天用XCode6 建了一个工程，在编译的时候发现target只能选择&#8217;iOS Devices&#8217;,没有任何的simulator可以选择。如下图所示</p>
+
+<p><img src="/images/2014-12-17.0.png" alt="" /></p>
+
+<p>在手动打开simulator的时候出现错误对话框“Unable to determine device.” 升级了mac os系统以及重装了XCode都不能解决。最后是通过Simulator的‘Device Management&#8217; 解决的。</p>
+
+<!--more-->
+
+
+<h1>错误产生原因</h1>
+
+<p>在Xcode6中, application 的 folder改变了。在iOS8 之前，app documents location 如下：</p>
+
+<p><code>~/Library/Application Support/iPhone Simulator/ {iOS Version} /Applications/ {Application ID} /Documents </code></p>
+
+<p>在Xcode6，simulator的folder改为：</p>
+
+<p><code>~/Library/Developer/CoreSimulator/Devices/XXXXXXXX</code></p>
+
+<p>Devices 下对应着各个版本的simulator folder。我在想清空app documents folder的时候，误操作，把整个devices folder给清空了。就导致Xcode无法加载simulator folder，所以无法启动相应的simulator</p>
+
+<h1>解决方案</h1>
+
+<p>通过Simulator的Device Manger可以解决。打开Device Manger 通过 打开Simulator，菜单栏Hardware->Device->Manage Devices&hellip; 如下图所示。</p>
+
+<p><img src="/images/2014-12-17.1.png" alt="" /></p>
+
+<p>在这里可以添加Xcode6支持的simulator。添加完毕之后查看’~/Library/Developer/CoreSimulator/Devices‘ folder，可见被误删掉的simulator devices都添加回来。重装了Xcode6之后，并没有自动添加这些devices，还是需要手动在Devices Manager中添加。</p>
+
+<p><img src="/images/2014-12-17.2.png" alt="" /></p>
+
+<p>如果想要查看当前支持的simulator types，可以用如下命令</p>
+
+<p><code>
+:~$ xcrun simctl list
+</code></p>
+
+<p>App Documents folder 是在：</p>
+
+<p><code>~/Library/Developer/CoreSimulator/Devices/XXXXX/data/Containers/Data/Application/XXXXX/Documents/</code></p>
+</div>
+
+<div class="meta">
+	
+</div>
+</article>
+
+	<div class="share">
+	<div class="addthis_toolbox addthis_default_style ">
+	
+	
+	<a class="addthis_button_tweet"></a>
+	
+	
+	<a class="addthis_counter addthis_pill_style"></a>
+	</div>
+  <script type="text/javascript" src="http://s7.addthis.com/js/250/addthis_widget.js#pubid="></script>
+</div>
+
+
+
+    </div>
+    <footer id="footer">
+    <div style="display:inline">
+    Copyright &copy; 2015
+
+    Coding&#8230;
+. Powered by <a href="http://octopress.org">Octopress</a> | 
+    Theme <a href="http://github.com/panks/fabric">fabric</a> by <a href="http://panks.me">Pankaj Kumar</a>
+</div>
+
+
+    </footer>
+    <script src="/javascripts/fabric.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+
+
+
+
+<!-- end toload --> 
+</div>
+</div>
+<script src="/javascripts/jquery.ui.totop.js" type="text/javascript"></script>
+<script type="text/javascript">
+/*<![CDATA[*/
+;(function($){$().UItoTop({easingType:'easeOutCirc'});})(jQuery); 
+/*]]>*/
+</script><!-- remove it to remove the scroll to top button -->
+</body>
+</html>
