@@ -3,7 +3,7 @@ layout: post
 title: "UITextField 限制输入字数解决方案"
 date: 2015-09-10 15:13:57 +0800
 comments: true
-categories: iOS开发
+categories: iOS
 ---
 本文提供了集中限制UITextField输入字数的方式，并针对中文联想词提供了解决方案。所用代码为Swift。
 #### 方法一：利用delegate实现
