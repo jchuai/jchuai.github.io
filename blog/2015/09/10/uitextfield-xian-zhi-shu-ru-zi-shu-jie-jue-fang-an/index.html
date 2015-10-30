@@ -1,0 +1,373 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>UITextField 限制输入字数解决方案 - Coding&#8230;</title>
+  <meta name="author" content="Coding...">
+
+  
+  <meta name="description" content="本文提供了集中限制UITextField输入字数的方式，并针对中文联想词提供了解决方案。所用代码为Swift。 方法一：利用delegate实现 UITextFieldDelegate 提供了函数可以判断用户输入过程，demo如下 func textField(textField: &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://jchuai.github.io/blog/2015/09/10/uitextfield-xian-zhi-shu-ru-zi-shu-jie-jue-fang-an/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+   <link href="/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Coding..." type="application/atom+xml">
+  <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
+
+<!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href='http://fonts.googleapis.com/css?family=Lato:400,100,100italic,300,300italic,400italic,700,700italic,900,900italic' rel='stylesheet' type='text/css'>
+<link href='http://fonts.googleapis.com/css?family=Lora:400,400italic,700,700italic' rel='stylesheet' type='text/css'>
+<link href='http://fonts.googleapis.com/css?family=Source+Code+Pro:200,300,400,500,600,700,900' rel='stylesheet' type='text/css'>
+
+
+
+
+  
+
+  <style>html{background: url(/images/background.png) no-repeat center center fixed;-webkit-background-size: cover;-moz-background-size: cover;-o-background-size: cover;background-size: cover;}</style>
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+</hgroup>
+
+</header>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">UITextField 限制输入字数解决方案</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+ 2015-09-10, Thu
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>本文提供了集中限制UITextField输入字数的方式，并针对中文联想词提供了解决方案。所用代码为Swift。</p>
+
+<h4>方法一：利用delegate实现</h4>
+
+<p>UITextFieldDelegate 提供了函数可以判断用户输入过程，demo如下</p>
+
+<!-- more -->
+
+
+<pre><code>func textField(textField: UITextField, shouldChangeCharactersInRange range: NSRange, replacementString string: String) -&gt; Bool {
+
+    // 不检测“删除”键
+    if count(string) == 0 {
+        return true
+    }
+
+    // 防止UITextField ‘Undo’引发crash
+    if range.location + range.length &gt; count(textField.text){
+        return false
+    }
+
+    let newLength = count(textField.text) + count(string) - range.length
+    return newLength &lt;= limitation - 1
+}
+</code></pre>
+
+<p>在TextField 更改之前，会通过该函数询问delegate是否应该改变text内容，因此我们可以在这个函数中约定是否接收用户的输入。
+但是这种方式针对中文输入法有个缺陷，它无法检测和限制联想词的输入。因此该方式不适合中文输入法下的字数限制</p>
+
+<h4>方法二：监控 UIControlEvents.EditingChanged 或者 UITextFieldTextDidChangeNotification</h4>
+
+<p>UITextField的text内容再更改的时候，会触发UIControlEvents.EditingChanged 并发送 UITextFieldTextDidChangeNotification。因此可以通过监听事件或者接收通知的方式来获知text内容的改变，在改变的时候添加限制条件。demo如下：</p>
+
+<p>增加监听事件</p>
+
+<pre><code>_textField.addTarget(self, action: Selector("textFieldDidChanged:"), forControlEvents: UIControlEvents.EditingChanged)
+</code></pre>
+
+<p>限制字数</p>
+
+<pre><code>func textFieldDidChanged(textField: UITextField) {
+    if limitation &gt; 0 {
+        // markedTextRange指的是当前高亮选中的，除了长按选中，用户中文输入拼音过程往往也是高亮选中状态
+        if let selectedRange = textField.markedTextRange {
+
+        } else {
+            let text = textField.text
+            if text.length &gt; limitation {
+                let range = Range(start: text.startIndex, end: advance(text.startIndex, limitation))
+                let subText = text.substringWithRange(range)
+                textField.text = subText
+            }
+        }
+    }
+
+}
+</code></pre>
+
+<p>通过这种方式对字数进行限制，产生的效果是用户在中文拼音输入状态不会限制字数，而是在用户确认输入的瞬间进行字数限制截取。目前跟Android自身带的字数限制功能效果一致</p>
+
+<h4>方法三：delegate与监控方式相结合</h4>
+
+<p>利用方法二已经可以满足UITextField字数限制的需求。但是如果想在用户输入拼音阶段就进行字数限制，防止用户输入过长，那么建议结合delegate。因为delegate在用户输入过程就可以判断输入的长度，从而判断是否允许用户继续输入；而在输入确认的时刻，再利用监控方式，防止中文联想词的输入。demo如下：</p>
+
+<p>增加监控</p>
+
+<pre><code>_textField.addTarget(self, action: Selector("textFieldDidChanged:"), forControlEvents: UIControlEvents.EditingChanged)
+</code></pre>
+
+<p>限制字数</p>
+
+<pre><code>func textFieldDidChanged(textField: UITextField) {
+    if limitation &gt; 0 {
+        // markedTextRange指的是当前高亮选中的，除了长按选中，用户中文输入拼音过程往往也是高亮选中状态
+        if let selectedRange = textField.markedTextRange {
+
+        } else {
+            let text = textField.text
+            if text.length &gt; limitation {
+                let range = Range(start: text.startIndex, end: advance(text.startIndex, limitation))
+                let subText = text.substringWithRange(range)
+                textField.text = subText
+            }
+        }
+    }
+
+}
+</code></pre>
+
+<p>delegate监控用户输入</p>
+
+<pre><code>func textField(textField: UITextField, shouldChangeCharactersInRange range: NSRange, replacementString string: String) -&gt; Bool {
+
+    // 不检测“删除”键
+    if count(string) == 0 {
+        return true
+    }
+
+    // 防止UITextField ‘Undo’引发crash
+    if range.location + range.length &gt; count(textField.text){
+        return false
+    }
+
+    let newLength = count(textField.text) + count(string) - range.length
+    return newLength &lt;= limitation - 1
+}       
+</code></pre>
+
+<p>从上面大家可以看出，监控也可在用户输入过程进行字数限制，但是效果不好。因为 <code>textField.text = subText</code>，用户输入一旦过长，文本框内容立马会被用户输入所替代，但这个时候往往输入的是几个拼音字母，因此用户体验不好。而delegate方法不会立马替换文本框内容，而是限制了用户输入，用户体验比较好。也因为这个原因，我们在delegate上的检测limitation要留有余量。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Coding&#8230;</span></span>
+
+      
+
+
+
+
+
+
+
+
+ 2015-09-10, Thu
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ios/'>ios</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://jchuai.github.io/blog/2015/09/10/uitextfield-xian-zhi-shu-ru-zi-shu-jie-jue-fang-an/" data-via="" data-counturl="http://jchuai.github.io/blog/2015/09/10/uitextfield-xian-zhi-shu-ru-zi-shu-jie-jue-fang-an/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/12/19/ubuntu-install-phabricator/" title="Previous Post: Ubuntu Install Phabricator">&laquo; Ubuntu Install Phabricator</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <ul id="recent_posts">
+      <li class="post">
+      <a href="http://jchuai.github.io" alt="Home"><img src="/images/Home.png"></a>
+      <a href="http://jchuai.github.io/archives/" alt="Archives"><img src="/images/Calendar.png"></a>
+      <a href="mailto:" alt="E-Mail"><img src="/images/Envelope.png"></a>
+      <a href="http://jchuai.github.io/atom.xml" alt="subscribe feed"><img src="/images/rss_big.png"></a>
+      </li>
+  </ul>
+</section>
+<section id="titles">
+  <a href="http://jchuai.github.io" title="Coding..."><img id="logo" src="http://jchuai.github.io/images/logo.png" /></a>
+  <h1 id="site_title"><a href="http://jchuai.github.io" title="Coding...">Coding&#8230;</a></h1>
+  <h3 id="site_subtitle">The People Who Are Crazy Enough to Think They Can Change the World, Are the Ones Who Do.</h3>
+</section>
+
+<section id="menu">
+  <ul>
+    <li><i class="fa fa-home fa-lg"></i><a href="http://jchuai.github.io"> Home </a></li>
+    <li><i class="fa fa-calendar fa-lg"></i><a href="http://jchuai.github.io/blog/archives/"> Archives </a></li>
+    <li><i class="fa fa-user fa-lg"></i><a href="http://jchuai.github.io/about/"> About </a></li>
+    <li><i class="fa fa-rss fa-lg"></i><a href="http://jchuai.github.io/atom.xml"> Feed </a></li>
+  </ul>
+</section>
+
+<section id="social">
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2015/09/10/uitextfield-xian-zhi-shu-ru-zi-shu-jie-jue-fang-an/">UITextField 限制输入字数解决方案</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/12/19/ubuntu-install-phabricator/">Ubuntu Install Phabricator</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/12/17/xcode6-devices-manager/">Xcode6 - Devices Manager</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/11/24/nodejs-foreach-vs-for/">Nodejs: forEach vs for</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/11/18/ios-create-customize-view-with-xib/">iOS Create Customize View With xib</a>
+      </li>
+    
+  </ul>
+</section>
+<section>  
+  <h1>Categories</h1>  
+  <ul id="categories">  
+    <li class='category'><a href='/blog/categories/ios/'>ios (2)</a></li>
+<li class='category'><a href='/blog/categories/life/'>life (1)</a></li>
+<li class='category'><a href='/blog/categories/node-js/'>node.js (3)</a></li>
+<li class='category'><a href='/blog/categories/xcode/'>xcode (1)</a></li>
+  
+  </ul>  
+</section>
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - Coding&#8230; -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'jchuai';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://jchuai.github.io/blog/2015/09/10/uitextfield-xian-zhi-shu-ru-zi-shu-jie-jue-fang-an/';
+        var disqus_url = 'http://jchuai.github.io/blog/2015/09/10/uitextfield-xian-zhi-shu-ru-zi-shu-jie-jue-fang-an/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

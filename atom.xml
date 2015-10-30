@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Coding...]]></title>
+  <link href="http://jchuai.github.io/atom.xml" rel="self"/>
+  <link href="http://jchuai.github.io/"/>
+  <updated>2015-09-11T17:53:50+08:00</updated>
+  <id>http://jchuai.github.io/</id>
+  <author>
+    <name><![CDATA[Coding...]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[UITextField 限制输入字数解决方案]]></title>
+    <link href="http://jchuai.github.io/blog/2015/09/10/uitextfield-xian-zhi-shu-ru-zi-shu-jie-jue-fang-an/"/>
+    <updated>2015-09-10T15:13:57+08:00</updated>
+    <id>http://jchuai.github.io/blog/2015/09/10/uitextfield-xian-zhi-shu-ru-zi-shu-jie-jue-fang-an</id>
+    <content type="html"><![CDATA[<p>本文提供了集中限制UITextField输入字数的方式，并针对中文联想词提供了解决方案。所用代码为Swift。</p>
+
+<h4>方法一：利用delegate实现</h4>
+
+<p>UITextFieldDelegate 提供了函数可以判断用户输入过程，demo如下</p>
+
+<!-- more -->
+
+
+<pre><code>func textField(textField: UITextField, shouldChangeCharactersInRange range: NSRange, replacementString string: String) -&gt; Bool {
+
+    // 不检测“删除”键
+    if count(string) == 0 {
+        return true
+    }
+
+    // 防止UITextField ‘Undo’引发crash
+    if range.location + range.length &gt; count(textField.text){
+        return false
+    }
+
+    let newLength = count(textField.text) + count(string) - range.length
+    return newLength &lt;= limitation - 1
+}
+</code></pre>
+
+<p>在TextField 更改之前，会通过该函数询问delegate是否应该改变text内容，因此我们可以在这个函数中约定是否接收用户的输入。
+但是这种方式针对中文输入法有个缺陷，它无法检测和限制联想词的输入。因此该方式不适合中文输入法下的字数限制</p>
+
+<h4>方法二：监控 UIControlEvents.EditingChanged 或者 UITextFieldTextDidChangeNotification</h4>
+
+<p>UITextField的text内容再更改的时候，会触发UIControlEvents.EditingChanged 并发送 UITextFieldTextDidChangeNotification。因此可以通过监听事件或者接收通知的方式来获知text内容的改变，在改变的时候添加限制条件。demo如下：</p>
+
+<p>增加监听事件</p>
+
+<pre><code>_textField.addTarget(self, action: Selector("textFieldDidChanged:"), forControlEvents: UIControlEvents.EditingChanged)
+</code></pre>
+
+<p>限制字数</p>
+
+<pre><code>func textFieldDidChanged(textField: UITextField) {
+    if limitation &gt; 0 {
+        // markedTextRange指的是当前高亮选中的，除了长按选中，用户中文输入拼音过程往往也是高亮选中状态
+        if let selectedRange = textField.markedTextRange {
+
+        } else {
+            let text = textField.text
+            if text.length &gt; limitation {
+                let range = Range(start: text.startIndex, end: advance(text.startIndex, limitation))
+                let subText = text.substringWithRange(range)
+                textField.text = subText
+            }
+        }
+    }
+
+}
+</code></pre>
+
+<p>通过这种方式对字数进行限制，产生的效果是用户在中文拼音输入状态不会限制字数，而是在用户确认输入的瞬间进行字数限制截取。目前跟Android自身带的字数限制功能效果一致</p>
+
+<h4>方法三：delegate与监控方式相结合</h4>
+
+<p>利用方法二已经可以满足UITextField字数限制的需求。但是如果想在用户输入拼音阶段就进行字数限制，防止用户输入过长，那么建议结合delegate。因为delegate在用户输入过程就可以判断输入的长度，从而判断是否允许用户继续输入；而在输入确认的时刻，再利用监控方式，防止中文联想词的输入。demo如下：</p>
+
+<p>增加监控</p>
+
+<pre><code>_textField.addTarget(self, action: Selector("textFieldDidChanged:"), forControlEvents: UIControlEvents.EditingChanged)
+</code></pre>
+
+<p>限制字数</p>
+
+<pre><code>func textFieldDidChanged(textField: UITextField) {
+    if limitation &gt; 0 {
+        // markedTextRange指的是当前高亮选中的，除了长按选中，用户中文输入拼音过程往往也是高亮选中状态
+        if let selectedRange = textField.markedTextRange {
+
+        } else {
+            let text = textField.text
+            if text.length &gt; limitation {
+                let range = Range(start: text.startIndex, end: advance(text.startIndex, limitation))
+                let subText = text.substringWithRange(range)
+                textField.text = subText
+            }
+        }
+    }
+
+}
+</code></pre>
+
+<p>delegate监控用户输入</p>
+
+<pre><code>func textField(textField: UITextField, shouldChangeCharactersInRange range: NSRange, replacementString string: String) -&gt; Bool {
+
+    // 不检测“删除”键
+    if count(string) == 0 {
+        return true
+    }
+
+    // 防止UITextField ‘Undo’引发crash
+    if range.location + range.length &gt; count(textField.text){
+        return false
+    }
+
+    let newLength = count(textField.text) + count(string) - range.length
+    return newLength &lt;= limitation - 1
+}       
+</code></pre>
+
+<p>从上面大家可以看出，监控也可在用户输入过程进行字数限制，但是效果不好。因为 <code>textField.text = subText</code>，用户输入一旦过长，文本框内容立马会被用户输入所替代，但这个时候往往输入的是几个拼音字母，因此用户体验不好。而delegate方法不会立马替换文本框内容，而是限制了用户输入，用户体验比较好。也因为这个原因，我们在delegate上的检测limitation要留有余量。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Ubuntu Install Phabricator]]></title>
+    <link href="http://jchuai.github.io/blog/2014/12/19/ubuntu-install-phabricator/"/>
+    <updated>2014-12-19T17:04:39+08:00</updated>
+    <id>http://jchuai.github.io/blog/2014/12/19/ubuntu-install-phabricator</id>
+    <content type="html"><![CDATA[<h1>背景</h1>
+
+<p>公司马上要部署新的version control system. 计划用Git。同时需要搭一套完整的环境，包括code review， permission control。暂时选定用<a href="http://phabricator.org/">Phabricator</a>. 目前有很多公司在用Phabricator，facebook转战Hg的同时也开始用。而且同时支持git/hg/svn，如果将来公司用git不爽了想用Hg，那么前端可以基本不用更改。做了两个星期的调研到底要用git还是Hg，已经没力气继续了，干脆提供Phabricator，以防止将来高层反悔了，我们也方便移植。
+开始用<a href="https://bitnami.com/stack/phabricator">Bitnami</a>一键安装了一个Phabricator server。结果发现Bitnami在安装时不可避免的更改了Phabricator的一些目录结构，导致后面升级更改都不方便。而且对于一键安装，作为一个系统管理员，最好避免这样偷懒，尤其是针对第三方提供的。一旦出问题就无从查起了。于是决定自己重搭环境。</p>
+
+<!-- more -->
+
+
+<h1>搭建步骤</h1>
+
+<h2>1. Ubuntu机子配置</h2>
+
+<p>建议采用Linux机子搭建Phabricator。官网提供了针对Linux机子的脚本，搭建很方便。首先需要更改机子Hostname。Phabricator要求server 域名必须带dot &lsquo;.&rsquo;,所以如果不想用IP地址，那么需要更改机子的hostname,hosts并重启机器。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>~$ sudo vi /etc/hostname
+</span><span class='line'>~$ sudo vi /etc/hosts
+</span><span class='line'>~$ sudo shutdown -r now</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>2. Install Phabricator</h2>
+
+<p>Phabricator 官网提供了针对RedHat和Ubuntu的安装脚本，可以帮助安装好所需要的applications。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Ubuntu
+</span><span class='line'>~$ wget http://www.phabricator.com/rsrc/install/install_ubuntu.sh
+</span><span class='line'>~$ sudo sh install_ubuntu.sh
+</span><span class='line'>
+</span><span class='line'>RedHat
+</span><span class='line'>~$ wget http://www.phabricator.com/rsrc/install/install_rhel-derivs.sh
+</span><span class='line'>~$ sudo sh install_rhel-derivs.sh</span></code></pre></td></tr></table></div></figure>
+
+
+<p>脚本会自动去下载相关的app，包括git/Apache/MySql/PHP等。此外，脚本还会git clone 相应的Phabricator的source code到当前folder。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ cd somewhere/ # pick some install directory
+</span><span class='line'>somewhere/ $ git clone https://github.com/phacility/libphutil.git
+</span><span class='line'>somewhere/ $ git clone https://github.com/phacility/arcanist.git
+</span><span class='line'>somewhere/ $ git clone https://github.com/phacility/phabricator.git</span></code></pre></td></tr></table></div></figure>
+
+
+<p>因为脚本运行过程中没有报任何错误，所以就直接进入<a href="https://secure.phabricator.com/book/phabricator/article/configuration_guide/">Configure Guide</a> 步骤了。</p>
+
+<h2>3. Configure Apache2</h2>
+
+<p>在配置Apache2的时候遇到了些困难。首先我机子上的Apache是通过apt-get安装的(上面脚本运行时已经安装过apache2了)，没有用source code 本地安装。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>~$ sudo apt-get install apache2</span></code></pre></td></tr></table></div></figure>
+
+
+<p>其次因为我机子的Apache2已经是最新版本的2.4。所以conf文件位置变掉了。Phabricator 官网上说在httpd.conf中配置VirtualHost，但是Apache2.4已经不用httpd.conf文件了。需要在/etc/apache2/sites-available/000-default.conf中添加VirtualHost。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>~$ sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/000-default.conf_bak
+</span><span class='line'>~$ sudo vi /etc/apache2/sites-available/000-default.conf
+</span><span class='line'>/# Update this file following Phabricator official doc
+</span><span class='line'>~$ sudo /etc/init.d/apache2 restart
+</span><span class='line'>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>4. Configure MySql</h2>
+
+<p>用以下命令确保mysql安装成功并运行</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>~$ mysql -uroot -p</span></code></pre></td></tr></table></div></figure>
+
+
+<p>在mysql运行情况下开始配置，</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>phabricator/ $ ./bin/storage upgrade --user &lt;user&gt; --password &lt;password&gt;</span></code></pre></td></tr></table></div></figure>
+
+
+<p>至此Phabricator全部配置完毕，但是还有其他的可以以管理员的身份进行配置。总的来说，因为有了官网提供的脚本，linux上配置Phabricator还是很方便的。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Xcode6 - Devices Manager]]></title>
+    <link href="http://jchuai.github.io/blog/2014/12/17/xcode6-devices-manager/"/>
+    <updated>2014-12-17T17:33:07+08:00</updated>
+    <id>http://jchuai.github.io/blog/2014/12/17/xcode6-devices-manager</id>
+    <content type="html"><![CDATA[<h1>背景</h1>
+
+<p>今天用XCode6 建了一个工程，在编译的时候发现target只能选择&#8217;iOS Devices&#8217;,没有任何的simulator可以选择。如下图所示</p>
+
+<p><img src="http://jchuai.github.io/images/2014-12-17.0.png" alt="" /></p>
+
+<p>在手动打开simulator的时候出现错误对话框“Unable to determine device.” 升级了mac os系统以及重装了XCode都不能解决。最后是通过Simulator的‘Device Management&#8217; 解决的。</p>
+
+<!--more-->
+
+
+<h1>错误产生原因</h1>
+
+<p>在Xcode6中, application 的 folder改变了。在iOS8 之前，app documents location 如下：</p>
+
+<p><code>~/Library/Application Support/iPhone Simulator/ {iOS Version} /Applications/ {Application ID} /Documents </code></p>
+
+<p>在Xcode6，simulator的folder改为：</p>
+
+<p><code>~/Library/Developer/CoreSimulator/Devices/XXXXXXXX</code></p>
+
+<p>Devices 下对应着各个版本的simulator folder。我在想清空app documents folder的时候，误操作，把整个devices folder给清空了。就导致Xcode无法加载simulator folder，所以无法启动相应的simulator</p>
+
+<h1>解决方案</h1>
+
+<p>通过Simulator的Device Manger可以解决。打开Device Manger 通过 打开Simulator，菜单栏Hardware->Device->Manage Devices&hellip; 如下图所示。</p>
+
+<p><img src="http://jchuai.github.io/images/2014-12-17.1.png" alt="" /></p>
+
+<p>在这里可以添加Xcode6支持的simulator。添加完毕之后查看’~/Library/Developer/CoreSimulator/Devices‘ folder，可见被误删掉的simulator devices都添加回来。重装了Xcode6之后，并没有自动添加这些devices，还是需要手动在Devices Manager中添加。</p>
+
+<p><img src="http://jchuai.github.io/images/2014-12-17.2.png" alt="" /></p>
+
+<p>如果想要查看当前支持的simulator types，可以用如下命令</p>
+
+<p><code>
+:~$ xcrun simctl list
+</code></p>
+
+<p>App Documents folder 是在：</p>
+
+<p><code>~/Library/Developer/CoreSimulator/Devices/XXXXX/data/Containers/Data/Application/XXXXX/Documents/</code></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Nodejs: forEach vs for]]></title>
+    <link href="http://jchuai.github.io/blog/2014/11/24/nodejs-foreach-vs-for/"/>
+    <updated>2014-11-24T18:19:44+08:00</updated>
+    <id>http://jchuai.github.io/blog/2014/11/24/nodejs-foreach-vs-for</id>
+    <content type="html"><![CDATA[<h1>背景</h1>
+
+<p>今天想要用node.js实现一个小程序，程序任务是：遍历某folder下所有文件，打印出是File类型的文件的名字。Node最大的特征是异步非阻塞，所以程序中用到的fs函数，全部想用异步的调用</p>
+
+<!-- more -->
+
+
+<h1>错误版本</h1>
+
+<pre>
+<code>
+var fs = require('fs')
+var homePath = './'
+
+fs.readdir(homePath, function(err, files){
+    for (var i = files.length - 1; i >= 0; i--) {
+        var file = files[i]
+        fs.stat(file, function(err, stats){
+            if(stats.isFile()){
+                console.log("2:" + file);
+            }
+        })
+    };
+});
+</code>
+</pre>
+
+
+<p>然后打印出的结果是</p>
+
+<pre>
+<code>
+:nodejs$ node forCallbackPractice.js
+2:FileUploadServer.js
+2:FileUploadServer.js
+2:FileUploadServer.js
+2:FileUploadServer.js
+2:FileUploadServer.js
+</code>
+</pre>
+
+
+<p>错误：结果恒为一个文件名！
+出现这种情况的原因是，在for循环中的fs.stat方法是非阻塞的，因此不会在次停留，只是注册了一个查询stat事件。等到查询stat事件执行完毕返回callback的时候，循环已经执行到了末尾，file对象恒为files中的最后一个被遍历对象。call back中拿到的file对象已经更改过，不是注册事件时的对象了。</p>
+
+<h1>正确版本</h1>
+
+<p>JavaScript中的array支持一个函数叫做forEach</p>
+
+<h4>forEach</h4>
+
+<pre>
+array1.forEach(callbackfn[, thisArg])
+</pre>
+
+
+<h4>参数</h4>
+
+<table>
+<tr><td>参数</td><td>定义</td></tr>
+<tr><td>array1</td><td>必选。 一个数组对象</td></tr>
+<tr><td>callbackfn</td><td>必选。 最多可以接受三个参数的函数。 对于数组中的每个元素，forEach 都会调用 callbackfn 函数一次</td></tr>
+<tr><td>thisArg</td><td>可选。 callbackfn 函数中的 this 关键字可引用的对象。 如果省略 thisArg，则 undefined 将用作 this 值</td></tr>
+</table>
+
+
+<h4>备注</h4>
+
+<p>对于数组中出现的每个元素，forEach 方法都会调用 callbackfn 函数一次（采用升序索引顺序）。其实forEach是Node中实现并行loop的一种方式。找到一篇文章，有很好的讲到node的<a href="http://book.mixu.net/node/ch7.html">Control flow</a>。Mark在这里，阅读完毕在深入研究。</p>
+
+<h4>Code</h4>
+
+<pre><code>
+var fs = require('fs')
+var homePath = './'
+
+fs.readdir(homePath, function(err, files){
+    files.forEach(function(file){
+        fs.stat(file, function(err, stats){
+            if(stats.isFile()){
+                console.log("1: " + file);
+            }
+        })
+    })
+});
+</code></pre>
+
+
+<h4>output</h4>
+
+<pre><code>
+:nodejs$ node forCallbackPractice.js
+1: FileUploadServer.js
+1: Leve4.mp4
+1: eclipse_ClearCase.zip
+1: forCallbackPractice.js
+1: MonkeyTalkSDK
+</code></pre>
+
+
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[iOS Create Customize View With xib]]></title>
+    <link href="http://jchuai.github.io/blog/2014/11/18/ios-create-customize-view-with-xib/"/>
+    <updated>2014-11-18T14:04:11+08:00</updated>
+    <id>http://jchuai.github.io/blog/2014/11/18/ios-create-customize-view-with-xib</id>
+    <content type="html"><![CDATA[
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Node Run Execute Shell Command]]></title>
+    <link href="http://jchuai.github.io/blog/2014/11/18/node-run-execute-shell-command/"/>
+    <updated>2014-11-18T14:03:25+08:00</updated>
+    <id>http://jchuai.github.io/blog/2014/11/18/node-run-execute-shell-command</id>
+    <content type="html"><![CDATA[
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Node Event]]></title>
+    <link href="http://jchuai.github.io/blog/2014/11/18/node-event/"/>
+    <updated>2014-11-18T14:02:02+08:00</updated>
+    <id>http://jchuai.github.io/blog/2014/11/18/node-event</id>
+    <content type="html"><![CDATA[
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[First Blog]]></title>
+    <link href="http://jchuai.github.io/blog/2014/11/18/first-blog/"/>
+    <updated>2014-11-18T13:49:47+08:00</updated>
+    <id>http://jchuai.github.io/blog/2014/11/18/first-blog</id>
+    <content type="html"><![CDATA[<p>这是我的第一篇博客。之前一直懒于学习和积累。最近受到大牛的影响，明白学习是每个IT民工一生要持续的事情。子曰“学而时习之，不亦说乎”，一味的学习不做笔记记录很容易忘记。外加上本人记忆力一向很差，所以还是要找个地方记录一下的。
+在接下来的日子里，我会主要focus在两个方面的学习上，iOS和Node.js</p>
+]]></content>
+  </entry>
+  
+</feed>
