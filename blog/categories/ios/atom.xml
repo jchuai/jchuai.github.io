@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ios | Coding...]]></title>
   <link href="http://jchuai.github.io/blog/categories/ios/atom.xml" rel="self"/>
   <link href="http://jchuai.github.io/"/>
-  <updated>2015-09-11T17:53:50+08:00</updated>
+  <updated>2015-11-01T10:21:05+08:00</updated>
   <id>http://jchuai.github.io/</id>
   <author>
     <name><![CDATA[Coding...]]></name>
@@ -12,6 +12,175 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第52条：别忘了NSTimer会保留其目标对象 (Swift)]]></title>
+    <link href="http://jchuai.github.io/blog/2015/10/29/di-52tiao-:bie-wang-liao-nstimerhui-bao-liu-qi-mu-biao-dui-xiang-swift/"/>
+    <updated>2015-10-29T19:46:10+08:00</updated>
+    <id>http://jchuai.github.io/blog/2015/10/29/di-52tiao-:bie-wang-liao-nstimerhui-bao-liu-qi-mu-biao-dui-xiang-swift</id>
+    <content type="html"><![CDATA[<p>在《Effective Objective-C: 编写高质量iOS与OS X代码的52个有效方法》一书中，第52条指出了NSTimer因为会保留其目标对象从而引入引用环的事实，并且给出了Objective—C版的解决方案来避免引用环。本文在这篇文章基础上给出了swift的实现方式，并且设计了一个新类简化了NSTimer的使用方式。</p>
+
+<!-- more -->
+
+
+<h4>NSTimer问题简述</h4>
+
+<p>我们在使用NSTimer做计时器的时候通常的使用方式如下</p>
+
+<pre><code>var timer: NSTimer
+func startTimer() {
+    timer = NSTimer.scheduledTimerWithTimeInterval(5.0,
+                             target: self, 
+                             selector: "doSomething",
+                             userInfo: nil, 
+                             repeats: true)
+}
+
+func doSomething() {
+    // do something
+}
+
+func stopTimer() {
+    timer.invalidate()
+    timer = nil
+}
+</code></pre>
+
+<p>这段代码的问题就在于timer通常是用实例变量存放的，因此实例保留了timer；但同时scheduledTimerWithTimeInterval函数中指明了target为self，因此timer也保留了实例，导致引用环的产生。<code>这时，实例必须在某个时间调用stopTimer()来停掉Timer，否则引用环将会导致内存泄露</code>。注意，即使在deinit中释放掉timer也是无济于事的。在引用环的被打破之前，deinit函数将不会被调用。</p>
+
+<h4>打破引用环解决方案</h4>
+
+<p>书中给出了打破引用环的解决方案：扩展NSTimer类型，传递‘块’类型，从而打破对target的引用。Objective-C代码如下(书中代码)</p>
+
+<pre><code>#import &lt;Foundation/Foundation.h&gt;
+
+@interface NSTimer (EOCBlocksSupport)
+
++ (NSTimer*)eoc_scheduledTimerWithTimeInterval:
+                        (NSTimeInterval) interval
+                            block:(void(^)())block
+                            repeats:(BOOL)repeats;
+@end
+
+@implementation NSTimer (EOCBlocksSupport)
+
++ (NSTimer*)eoc_scheduledTimerWithTimeInterval:
+                        (NSTimeInterval) interval
+                            block:(void(^)())block
+                            repeats:(BOOL)repeats
+{
+    return [self scheduledTimerWithTimeInterval: interval
+                                        target:self
+                      selector:@selector(eoc_blockInvoke:)
+                      userInfo:[block copy]
+                      repeats:repeats];
+}
+
++ (void)eoc_blockInvoke:(NSTimer*)timer {
+    void (^block)() = timer.userInfo;
+    if (block) {
+        block();
+    }
+}
+</code></pre>
+
+<p>可以看出，NSTimer的引用对象变成了self；对于实例对象，只是传递了block的copy，因此可以打断整个引用环。
+但在用swift实现上述方案时有个问题:无法直接传递closue。从上面OC的代码可以看出，block（closue）是直接赋值给userInfo，来实现传递的。在Swift中，这个函数的userInfo类型为AnyObject？类型，但是Swift中的closue不属于AnyObject类型.</p>
+
+<pre><code>let closure: () -&gt; Void = { print("Hello1") } // ()-&gt;()
+closure is AnyObject //false
+</code></pre>
+
+<p>因此不可以直接将closure赋值给userInfo属性。我们需要定义一个类，来保存closure。在这里采用Generic泛类方式来实现。代码如下</p>
+
+<pre><code>class Closure&lt;T&gt; {
+    var value: T
+    init(value: T) {
+        self.value = value
+    }
+}
+</code></pre>
+
+<p>此时可以通过定义Closure类实例，将closure传递给userInfo对象。全部代码如下：</p>
+
+<pre><code>extension NSTimer {
+    class func eoc_scheduledTimerWithTimeInterval(ti: NSTimeInterval, 
+                                            closure: () -&gt; Void, 
+                                            repeats: Bool) -&gt; NSTimer {
+        let userInfo = Closure(value: closure)
+        return self.scheduledTimerWithTimeInterval(ti, 
+                                        target: self, 
+                                        selector: "excuteClosure:", 
+                                        userInfo: userInfo, 
+                                        repeats: repeats)
+    }
+
+    class func excuteClosure(timer: NSTimer) {
+        if let userInfo = timer.userInfo as? Closure&lt;()-&gt;Void&gt; {
+            let closure = userInfo.value
+            closure()
+        }
+    }
+}
+
+class Closure&lt;T&gt; {
+    var value: T
+    init(value: T) {
+        self.value = value
+    }
+}
+</code></pre>
+
+<h4>进一步优化</h4>
+
+<p>上面我们已经完成了对于NSTimer类型的封装，因为打破了引用环，在使用的时候，只需要在实例的deinit函数中调用timer.invalide()函数即可，不必再担心由于疏忽忘记调用invalide函数而使得timer一直存在。如果进一步的优化，那么调用invalide()函数这一步也可以省略掉，那就是定义个TimerManager类，在这个类中实现对timer的启动和停止。</p>
+
+<pre><code>class TimerManager: NSObject {
+    private var _timer: NSTimer?
+
+    init(timeInterval: NSTimeInterval, closure: ()-&gt;Void, repeats: Bool) {
+
+        _timer = NSTimer.eoc_scheduledTimerWithTimeInterval(timeInterval,
+                                            closure: closure, 
+                                            repeats: repeats)
+    }
+
+    class func eoc_scheduledTimerWithTimeInterval(timeInterval: NSTimeInterval, 
+                                            closure: ()-&gt;Void, 
+                                            repeats: Bool) -&gt; TimerManager{
+
+        return TimerManager(timeInterval: timeInterval, closure: closure, repeats: repeats)
+    }
+
+    deinit{
+        _timer?.invalidate()
+        _timer = nil
+    }
+}
+</code></pre>
+
+<p>在使用过程中，利用TimerManager代替NSTimer使用，在实例被释放的时候，TimerManager的deinit函数便会被触发，因此不需要在实例中来停止timer，一切交由TimerManger来处理。使用demo如下：</p>
+
+<pre><code>class Demo: NSObject {
+    var timerManager: TimerManager?
+    func startTimer() {
+        timerManager = TimerManager.eoc_scheduledTimerWithTimeInterval(5.0, 
+                                    closure: doSomething, 
+                                    repeats: true)
+    }
+    func doSomething() {
+        // do something
+    }
+
+    func stopTimer() {
+        // 由于TimerManager会来管理Timer，因此不再需要手动关闭NSTimer
+        // timer.invalidate()
+        // timer = nil
+    }
+}
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[UITextField 限制输入字数解决方案]]></title>

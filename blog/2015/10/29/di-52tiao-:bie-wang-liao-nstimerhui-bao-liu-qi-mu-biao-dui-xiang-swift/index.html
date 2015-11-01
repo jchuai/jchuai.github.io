@@ -1,0 +1,425 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>第52条：别忘了NSTimer会保留其目标对象 (Swift) - Coding&#8230;</title>
+  <meta name="author" content="Coding...">
+
+  
+  <meta name="description" content="在《Effective Objective-C: 编写高质量iOS与OS X代码的52个有效方法》一书中，第52条指出了NSTimer因为会保留其目标对象从而引入引用环的事实，并且给出了Objective—C版的解决方案来避免引用环。本文在这篇文章基础上给出了swift的实现方式， &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://jchuai.github.io/blog/2015/10/29/di-52tiao-:bie-wang-liao-nstimerhui-bao-liu-qi-mu-biao-dui-xiang-swift/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+   <link href="/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Coding..." type="application/atom+xml">
+  <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
+
+<!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href='http://fonts.googleapis.com/css?family=Lato:400,100,100italic,300,300italic,400italic,700,700italic,900,900italic' rel='stylesheet' type='text/css'>
+<link href='http://fonts.googleapis.com/css?family=Lora:400,400italic,700,700italic' rel='stylesheet' type='text/css'>
+<link href='http://fonts.googleapis.com/css?family=Source+Code+Pro:200,300,400,500,600,700,900' rel='stylesheet' type='text/css'>
+
+
+
+
+  
+
+  <style>html{background: url(/images/background.png) no-repeat center center fixed;-webkit-background-size: cover;-moz-background-size: cover;-o-background-size: cover;background-size: cover;}</style>
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+</hgroup>
+
+</header>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">第52条：别忘了NSTimer会保留其目标对象 (Swift)</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+ 2015-10-29, Thu
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>在《Effective Objective-C: 编写高质量iOS与OS X代码的52个有效方法》一书中，第52条指出了NSTimer因为会保留其目标对象从而引入引用环的事实，并且给出了Objective—C版的解决方案来避免引用环。本文在这篇文章基础上给出了swift的实现方式，并且设计了一个新类简化了NSTimer的使用方式。</p>
+
+<!-- more -->
+
+
+<h4>NSTimer问题简述</h4>
+
+<p>我们在使用NSTimer做计时器的时候通常的使用方式如下</p>
+
+<pre><code>var timer: NSTimer
+func startTimer() {
+    timer = NSTimer.scheduledTimerWithTimeInterval(5.0,
+                             target: self, 
+                             selector: "doSomething",
+                             userInfo: nil, 
+                             repeats: true)
+}
+
+func doSomething() {
+    // do something
+}
+
+func stopTimer() {
+    timer.invalidate()
+    timer = nil
+}
+</code></pre>
+
+<p>这段代码的问题就在于timer通常是用实例变量存放的，因此实例保留了timer；但同时scheduledTimerWithTimeInterval函数中指明了target为self，因此timer也保留了实例，导致引用环的产生。<code>这时，实例必须在某个时间调用stopTimer()来停掉Timer，否则引用环将会导致内存泄露</code>。注意，即使在deinit中释放掉timer也是无济于事的。在引用环的被打破之前，deinit函数将不会被调用。</p>
+
+<h4>打破引用环解决方案</h4>
+
+<p>书中给出了打破引用环的解决方案：扩展NSTimer类型，传递‘块’类型，从而打破对target的引用。Objective-C代码如下(书中代码)</p>
+
+<pre><code>#import &lt;Foundation/Foundation.h&gt;
+
+@interface NSTimer (EOCBlocksSupport)
+
++ (NSTimer*)eoc_scheduledTimerWithTimeInterval:
+                        (NSTimeInterval) interval
+                            block:(void(^)())block
+                            repeats:(BOOL)repeats;
+@end
+
+@implementation NSTimer (EOCBlocksSupport)
+
++ (NSTimer*)eoc_scheduledTimerWithTimeInterval:
+                        (NSTimeInterval) interval
+                            block:(void(^)())block
+                            repeats:(BOOL)repeats
+{
+    return [self scheduledTimerWithTimeInterval: interval
+                                        target:self
+                      selector:@selector(eoc_blockInvoke:)
+                      userInfo:[block copy]
+                      repeats:repeats];
+}
+
++ (void)eoc_blockInvoke:(NSTimer*)timer {
+    void (^block)() = timer.userInfo;
+    if (block) {
+        block();
+    }
+}
+</code></pre>
+
+<p>可以看出，NSTimer的引用对象变成了self；对于实例对象，只是传递了block的copy，因此可以打断整个引用环。
+但在用swift实现上述方案时有个问题:无法直接传递closue。从上面OC的代码可以看出，block（closue）是直接赋值给userInfo，来实现传递的。在Swift中，这个函数的userInfo类型为AnyObject？类型，但是Swift中的closue不属于AnyObject类型.</p>
+
+<pre><code>let closure: () -&gt; Void = { print("Hello1") } // ()-&gt;()
+closure is AnyObject //false
+</code></pre>
+
+<p>因此不可以直接将closure赋值给userInfo属性。我们需要定义一个类，来保存closure。在这里采用Generic泛类方式来实现。代码如下</p>
+
+<pre><code>class Closure&lt;T&gt; {
+    var value: T
+    init(value: T) {
+        self.value = value
+    }
+}
+</code></pre>
+
+<p>此时可以通过定义Closure类实例，将closure传递给userInfo对象。全部代码如下：</p>
+
+<pre><code>extension NSTimer {
+    class func eoc_scheduledTimerWithTimeInterval(ti: NSTimeInterval, 
+                                            closure: () -&gt; Void, 
+                                            repeats: Bool) -&gt; NSTimer {
+        let userInfo = Closure(value: closure)
+        return self.scheduledTimerWithTimeInterval(ti, 
+                                        target: self, 
+                                        selector: "excuteClosure:", 
+                                        userInfo: userInfo, 
+                                        repeats: repeats)
+    }
+
+    class func excuteClosure(timer: NSTimer) {
+        if let userInfo = timer.userInfo as? Closure&lt;()-&gt;Void&gt; {
+            let closure = userInfo.value
+            closure()
+        }
+    }
+}
+
+class Closure&lt;T&gt; {
+    var value: T
+    init(value: T) {
+        self.value = value
+    }
+}
+</code></pre>
+
+<h4>进一步优化</h4>
+
+<p>上面我们已经完成了对于NSTimer类型的封装，因为打破了引用环，在使用的时候，只需要在实例的deinit函数中调用timer.invalide()函数即可，不必再担心由于疏忽忘记调用invalide函数而使得timer一直存在。如果进一步的优化，那么调用invalide()函数这一步也可以省略掉，那就是定义个TimerManager类，在这个类中实现对timer的启动和停止。</p>
+
+<pre><code>class TimerManager: NSObject {
+    private var _timer: NSTimer?
+
+    init(timeInterval: NSTimeInterval, closure: ()-&gt;Void, repeats: Bool) {
+
+        _timer = NSTimer.eoc_scheduledTimerWithTimeInterval(timeInterval,
+                                            closure: closure, 
+                                            repeats: repeats)
+    }
+
+    class func eoc_scheduledTimerWithTimeInterval(timeInterval: NSTimeInterval, 
+                                            closure: ()-&gt;Void, 
+                                            repeats: Bool) -&gt; TimerManager{
+
+        return TimerManager(timeInterval: timeInterval, closure: closure, repeats: repeats)
+    }
+
+    deinit{
+        _timer?.invalidate()
+        _timer = nil
+    }
+}
+</code></pre>
+
+<p>在使用过程中，利用TimerManager代替NSTimer使用，在实例被释放的时候，TimerManager的deinit函数便会被触发，因此不需要在实例中来停止timer，一切交由TimerManger来处理。使用demo如下：</p>
+
+<pre><code>class Demo: NSObject {
+    var timerManager: TimerManager?
+    func startTimer() {
+        timerManager = TimerManager.eoc_scheduledTimerWithTimeInterval(5.0, 
+                                    closure: doSomething, 
+                                    repeats: true)
+    }
+    func doSomething() {
+        // do something
+    }
+
+    func stopTimer() {
+        // 由于TimerManager会来管理Timer，因此不再需要手动关闭NSTimer
+        // timer.invalidate()
+        // timer = nil
+    }
+}
+</code></pre>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Coding&#8230;</span></span>
+
+      
+
+
+
+
+
+
+
+
+ 2015-10-29, Thu
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ios/'>ios</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://jchuai.github.io/blog/2015/10/29/di-52tiao-:bie-wang-liao-nstimerhui-bao-liu-qi-mu-biao-dui-xiang-swift/" data-via="" data-counturl="http://jchuai.github.io/blog/2015/10/29/di-52tiao-:bie-wang-liao-nstimerhui-bao-liu-qi-mu-biao-dui-xiang-swift/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2015/09/10/uitextfield-xian-zhi-shu-ru-zi-shu-jie-jue-fang-an/" title="Previous Post: UITextField 限制输入字数解决方案">&laquo; UITextField 限制输入字数解决方案</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <ul id="recent_posts">
+      <li class="post">
+      <a href="http://jchuai.github.io" alt="Home"><img src="/images/Home.png"></a>
+      <a href="http://jchuai.github.io/archives/" alt="Archives"><img src="/images/Calendar.png"></a>
+      <a href="mailto:" alt="E-Mail"><img src="/images/Envelope.png"></a>
+      <a href="http://jchuai.github.io/atom.xml" alt="subscribe feed"><img src="/images/rss_big.png"></a>
+      </li>
+  </ul>
+</section>
+<section id="titles">
+  <a href="http://jchuai.github.io" title="Coding..."><img id="logo" src="http://jchuai.github.io/images/logo.png" /></a>
+  <h1 id="site_title"><a href="http://jchuai.github.io" title="Coding...">Coding&#8230;</a></h1>
+  <h3 id="site_subtitle">The People Who Are Crazy Enough to Think They Can Change the World, Are the Ones Who Do.</h3>
+</section>
+
+<section id="menu">
+  <ul>
+    <li><i class="fa fa-home fa-lg"></i><a href="http://jchuai.github.io"> Home </a></li>
+    <li><i class="fa fa-calendar fa-lg"></i><a href="http://jchuai.github.io/blog/archives/"> Archives </a></li>
+    <li><i class="fa fa-user fa-lg"></i><a href="http://jchuai.github.io/about/"> About </a></li>
+    <li><i class="fa fa-rss fa-lg"></i><a href="http://jchuai.github.io/atom.xml"> Feed </a></li>
+  </ul>
+</section>
+
+<section id="social">
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2015/10/29/di-52tiao-:bie-wang-liao-nstimerhui-bao-liu-qi-mu-biao-dui-xiang-swift/">第52条：别忘了NSTimer会保留其目标对象 (Swift)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/09/10/uitextfield-xian-zhi-shu-ru-zi-shu-jie-jue-fang-an/">UITextField 限制输入字数解决方案</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/12/19/ubuntu-install-phabricator/">Ubuntu Install Phabricator</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/12/17/xcode6-devices-manager/">Xcode6 - Devices Manager</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/11/24/nodejs-foreach-vs-for/">Nodejs: forEach vs for</a>
+      </li>
+    
+  </ul>
+</section>
+<section>  
+  <h1>Categories</h1>  
+  <ul id="categories">  
+    <li class='category'><a href='/blog/categories/ios/'>ios (3)</a></li>
+<li class='category'><a href='/blog/categories/life/'>life (1)</a></li>
+<li class='category'><a href='/blog/categories/node-js/'>node.js (3)</a></li>
+<li class='category'><a href='/blog/categories/xcode/'>xcode (1)</a></li>
+  
+  </ul>  
+</section>
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - Coding&#8230; -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'jchuai';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://jchuai.github.io/blog/2015/10/29/di-52tiao-:bie-wang-liao-nstimerhui-bao-liu-qi-mu-biao-dui-xiang-swift/';
+        var disqus_url = 'http://jchuai.github.io/blog/2015/10/29/di-52tiao-:bie-wang-liao-nstimerhui-bao-liu-qi-mu-biao-dui-xiang-swift/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
